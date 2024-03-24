@@ -163,6 +163,9 @@ resource "google_storage_bucket" "environment_bucket" {
   labels = {
     environment = terraform.workspace
   }
+  depends_on = [
+    google_project_service.service["storage.googleapis.com"]
+  ]
 }
 
 resource "google_service_account" "environment_account" {
