@@ -1,0 +1,4 @@
+# terraform working directory
+.terraform
+# secrets
+.secrets
