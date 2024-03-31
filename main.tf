@@ -94,15 +94,9 @@ resource "google_service_account" "environment_account" {
   project      = google_project.environment_project.project_id
 }
 
-resource "google_project_iam_member" "environment_compute_admins" {
+resource "google_project_iam_binding" "environment_editors" {
   project = google_project.environment_project.project_id
-  role    = "roles/compute.admin"
-  member  = "serviceAccount:${google_service_account.environment_account.email}"
-}
-
-resource "google_project_iam_binding" "project" {
-  project = google_project.environment_project.project_id
-  role    = "roles/compute.admin"
+  role    = "roles/editor"
 
   members = [
     "serviceAccount:${google_service_account.environment_account.email}",
