@@ -27,3 +27,9 @@ variable "exec_group" {
   description = "The email address of the Google group with exectuive usage for the project."
   nullable    = false
 }
+
+variable "principal_set" {
+  type        = string
+  description = "The principal set."
+  nullable    = false
+}

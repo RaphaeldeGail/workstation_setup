@@ -103,3 +103,12 @@ resource "google_project_iam_binding" "environment_editors" {
     "group:${var.exec_group}"
   ]
 }
+
+resource "google_service_account_iam_binding" "workld_user" {
+  service_account_id = google_service_account.environment_account.id
+  role               = "roles/iam.workloadIdentityUser"
+
+  members = [
+    var.principal_set,
+  ]
+}
