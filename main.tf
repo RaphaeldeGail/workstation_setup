@@ -25,6 +25,10 @@ provider "google" {
 provider "random" {
 }
 
+data "google_folder" "workspace_folder" {
+  folder = var.folder
+}
+
 locals {
   apis = [
     "iam.googleapis.com",
@@ -47,10 +51,6 @@ resource "random_string" "random" {
   min_numeric = 2
   upper       = false
   special     = false
-}
-
-data "google_folder" "workspace_folder" {
-  folder = var.folder
 }
 
 resource "google_project" "environment_project" {
@@ -87,22 +87,6 @@ resource "google_project_service" "service" {
   disable_on_destroy         = true
 }
 
-resource "google_storage_bucket" "environment_bucket" {
-  name                        = join("-", [local.name, random_string.random.result])
-  location                    = var.region
-  project                     = google_project.environment_project.project_id
-  force_destroy               = false
-  storage_class               = "STANDARD"
-  uniform_bucket_level_access = true
-
-  labels = {
-    environment = terraform.workspace
-  }
-  depends_on = [
-    google_project_service.service["storage.googleapis.com"]
-  ]
-}
-
 resource "google_service_account" "environment_account" {
   account_id   = join("-", [terraform.workspace, "admin"])
   display_name = join(" ", [title(terraform.workspace), "Admin", "Service", "Account"])
@@ -110,20 +94,18 @@ resource "google_service_account" "environment_account" {
   project      = google_project.environment_project.project_id
 }
 
-resource "google_storage_bucket_iam_member" "workspace_bucket_editor" {
-  bucket = google_storage_bucket.environment_bucket.name
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.environment_account.email}"
-}
-
-resource "google_storage_bucket_iam_member" "environment_bucket_owner" {
-  bucket = google_storage_bucket.environment_bucket.name
-  role   = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.environment_account.email}"
-}
-
 resource "google_project_iam_member" "environment_compute_admins" {
   project = google_project.environment_project.project_id
   role    = "roles/compute.admin"
   member  = "serviceAccount:${google_service_account.environment_account.email}"
+}
+
+resource "google_project_iam_binding" "project" {
+  project = google_project.environment_project.project_id
+  role    = "roles/compute.admin"
+
+  members = [
+    "serviceAccount:${google_service_account.environment_account.email}",
+    "group:${var.exec_group}"
+  ]
 }

@@ -21,3 +21,9 @@ variable "region" {
   description = "Geographical *region* for Google Cloud Platform."
   nullable    = false
 }
+
+variable "exec_group" {
+  type        = string
+  description = "The email address of the Google group with exectuive usage for the project."
+  nullable    = false
+}
