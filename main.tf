@@ -122,7 +122,7 @@ data "google_kms_crypto_key" "symmetric_key" {
 resource "google_kms_crypto_key_iam_member" "crypto_disk" {
   crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:${data.google_compute_default_service_account.default.email}"
+  member        = "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
 }
 
 resource "google_service_account_iam_binding" "workld_user" {
