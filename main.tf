@@ -104,10 +104,6 @@ resource "google_project_iam_binding" "environment_editors" {
   ]
 }
 
-data "google_compute_default_service_account" "default" {
-  project = google_project.environment_project.project_id
-}
-
 data "google_kms_key_ring" "key_ring" {
   project  = var.project
   name     = "${local.wrk_name}-keyring"
@@ -119,7 +115,7 @@ data "google_kms_crypto_key" "symmetric_key" {
   name     = "${local.wrk_name}-symmetric-key"
 }
 
-resource "google_kms_crypto_key_iam_member" "crypto_disk" {
+resource "google_kms_crypto_key_iam_member" "crypto_compute" {
   crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
@@ -131,5 +127,32 @@ resource "google_service_account_iam_binding" "workld_user" {
 
   members = [
     var.principal_set,
+  ]
+}
+
+data "google_compute_zones" "available" {
+}
+
+resource "google_compute_disk" "boot_disk" {
+  project     = google_project.environment_project.project_id
+  name        = join("-", [local.name, "boot", "disk"])
+  description = "Data disk for the workstation."
+
+  labels = {
+    environment = terraform.workspace
+  }
+
+  image                     = "ubuntu-2204-lts"
+  size                      = 10
+  type                      = "pd-standard"
+  physical_block_size_bytes = 4096
+  zone                      = data.google_compute_zones.available.names[0]
+
+  disk_encryption_key {
+    kms_key_self_link = data.google_kms_crypto_key.symmetric_key.id
+  }
+
+  depends_on = [
+    google_kms_crypto_key_iam_member.crypto_compute
   ]
 }
