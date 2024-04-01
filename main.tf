@@ -104,6 +104,27 @@ resource "google_project_iam_binding" "environment_editors" {
   ]
 }
 
+data "google_compute_default_service_account" "default" {
+  project = google_project.environment_project.project_id
+}
+
+data "google_kms_key_ring" "key_ring" {
+  project  = var.project
+  name     = "${local.wrk_name}-keyring"
+  location = var.region
+}
+
+data "google_kms_crypto_key" "symmetric_key" {
+  key_ring = data.google_kms_key_ring.key_ring.id
+  name     = "${local.wrk_name}-symmetric-key"
+}
+
+resource "google_kms_crypto_key_iam_member" "crypto_disk" {
+  crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:${data.google_compute_default_service_account.default.email}"
+}
+
 resource "google_service_account_iam_binding" "workld_user" {
   service_account_id = google_service_account.environment_account.id
   role               = "roles/iam.workloadIdentityUser"
