@@ -58,7 +58,7 @@ resource "google_project" "environment_project" {
   project_id = join("-", [local.name, random_string.random.result])
   folder_id  = var.folder
   labels = {
-    environment = terraform.workspace
+    environment = lower(terraform.workspace)
   }
   skip_delete = true
 
@@ -195,6 +195,7 @@ resource "google_compute_disk" "boot_disk" {
 
 resource "google_compute_resource_policy" "shutdown_policy" {
   name = join("-", [local.name, "shutdown", "policy"])
+  project = google_project.environment_project.project_id
 
   instance_schedule_policy {
     vm_stop_schedule {
@@ -206,6 +207,7 @@ resource "google_compute_resource_policy" "shutdown_policy" {
 
 resource "google_compute_resource_policy" "backup_policy" {
   name = join("-", [local.name, "backup", "policy"])
+  project = google_project.environment_project.project_id
 
   snapshot_schedule_policy {
     schedule {
