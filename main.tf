@@ -158,7 +158,7 @@ resource "google_compute_firewall" "default" {
   network       = google_compute_network.network.name
   source_ranges = [var.user.ip]
 
-  target_service_accounts = google_service_account.environment_account.email
+  target_service_accounts = [ google_service_account.environment_account.email ]
 
   allow {
     protocol = "tcp"
