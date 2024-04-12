@@ -118,6 +118,10 @@ resource "google_kms_crypto_key_iam_member" "crypto_compute" {
   crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
+
+  depends_on = [
+    google_project_service.service["iam.googleapis.com"]
+  ]
 }
 
 resource "google_compute_network" "network" {
@@ -128,6 +132,10 @@ resource "google_compute_network" "network" {
 
   auto_create_subnetworks         = false
   delete_default_routes_on_create = true
+
+  depends_on = [
+    google_project_service.service["compute.googleapis.com"]
+  ]
 }
 
 resource "google_compute_subnetwork" "subnetwork" {
@@ -203,6 +211,10 @@ resource "google_compute_resource_policy" "shutdown_policy" {
     }
     time_zone = "Europe/Paris"
   }
+
+  depends_on = [
+    google_project_service.service["compute.googleapis.com"]
+  ]
 }
 
 resource "google_compute_resource_policy" "backup_policy" {
@@ -222,6 +234,10 @@ resource "google_compute_resource_policy" "backup_policy" {
       max_retention_days = 15
     }
   }
+
+  depends_on = [
+    google_project_service.service["compute.googleapis.com"]
+  ]
 }
 
 resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachment" {
@@ -278,6 +294,10 @@ resource "google_compute_instance" "workstation" {
   }
 
   resource_policies = [google_compute_resource_policy.shutdown_policy.self_link]
+
+  depends_on = [
+    google_project_service.service["compute.googleapis.com"]
+  ]
 }
 
 resource "google_compute_address" "front_nat" {
