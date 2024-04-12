@@ -22,9 +22,21 @@ variable "region" {
   nullable    = false
 }
 
+variable "bucket" {
+  type = string
+  description = "The name of the administrator bucket."
+  nullable = false
+}
+
+variable "dns_zone" {
+  type = string
+  description = "The DNS zone for the workspace."
+  nullable = false
+}
+
 variable "exec_group" {
   type        = string
-  description = "The email address of the Google group with exectuive usage for the project."
+  description = "The email address of the Google group with usage permissions for the workstation."
   nullable    = false
 }
 
@@ -32,4 +44,15 @@ variable "principal_set" {
   type        = string
   description = "The principal set."
   nullable    = false
+}
+
+variable "user" {
+  type = object({
+    ip = string
+    name = string
+    key = string
+  })
+
+  description = "An object declaring a user with access authorization to the workstation."
+  nullable = false
 }
