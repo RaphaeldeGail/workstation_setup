@@ -121,10 +121,10 @@ resource "google_kms_crypto_key_iam_member" "crypto_compute" {
 }
 
 resource "google_compute_network" "network" {
-  project                 = google_project.environment_project.project_id
-  name                    = "${local.name}-network"
-  description             = "Network for the ${local.name} environment."
-  routing_mode            = "REGIONAL"
+  project      = google_project.environment_project.project_id
+  name         = "${local.name}-network"
+  description  = "Network for the ${local.name} environment."
+  routing_mode = "REGIONAL"
 
   auto_create_subnetworks         = false
   delete_default_routes_on_create = true
@@ -139,7 +139,7 @@ resource "google_compute_subnetwork" "subnetwork" {
 }
 
 resource "google_compute_route" "default_route" {
-  name        = join("-", ["from", var.workspace.name, "to", "internet"])
+  name        = join("-", ["from", local.name, "to", "internet"])
   description = "Default route from the workspace network to the internet"
 
   network          = google_compute_network.network.name
@@ -150,13 +150,13 @@ resource "google_compute_route" "default_route" {
 }
 
 resource "google_compute_firewall" "default" {
-  name    = "user-firewall"
-  project = google_project.environment_project.project_id
-  description = "Only allow connections from user public IP to workstation."
-  direction = "INRGESS"
-  priority = 0
-  network = google_compute_network.network.name
-  source_ranges = [ var.user.ip ]
+  name          = "user-firewall"
+  project       = google_project.environment_project.project_id
+  description   = "Only allow connections from user public IP to workstation."
+  direction     = "INGRESS"
+  priority      = 0
+  network       = google_compute_network.network.name
+  source_ranges = [var.user.ip]
 
   target_service_accounts = google_service_account.environment_account.email
 
@@ -279,15 +279,15 @@ resource "google_compute_instance" "workstation" {
 }
 
 resource "google_compute_address" "front_nat" {
-  name          = "front-address"
-  description   = "External IP address for the workstation." 
-  address_type  = "EXTERNAL"
-  region        = var.region
-  project       = google_project.environment_project.project_id 
+  name         = "front-address"
+  description  = "External IP address for the workstation."
+  address_type = "EXTERNAL"
+  region       = var.region
+  project      = google_project.environment_project.project_id
 }
 
 data "google_dns_managed_zone" "working_zone" {
-  name = var.dns_zone
+  name    = var.dns_zone
   project = var.project
 }
 

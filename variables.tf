@@ -23,15 +23,15 @@ variable "region" {
 }
 
 variable "bucket" {
-  type = string
+  type        = string
   description = "The name of the administrator bucket."
-  nullable = false
+  nullable    = false
 }
 
 variable "dns_zone" {
-  type = string
+  type        = string
   description = "The DNS zone for the workspace."
-  nullable = false
+  nullable    = false
 }
 
 variable "exec_group" {
@@ -48,11 +48,11 @@ variable "principal_set" {
 
 variable "user" {
   type = object({
-    ip = string
+    ip   = string
     name = string
-    key = string
+    key  = string
   })
 
   description = "An object declaring a user with access authorization to the workstation."
-  nullable = false
+  nullable    = false
 }
