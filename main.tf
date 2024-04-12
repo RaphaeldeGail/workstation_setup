@@ -120,7 +120,7 @@ resource "google_kms_crypto_key_iam_member" "crypto_compute" {
   member        = "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
 }
 
-resource "google_compute_network" "vpc_network" {
+resource "google_compute_network" "network" {
   project                 = google_project.environment_project.project_id
   name                    = "${local.name}-network"
   description             = "Network for the ${local.name} environment."
@@ -134,7 +134,7 @@ resource "google_compute_subnetwork" "subnetwork" {
   name        = join("-", ["workstations", "subnet"])
   description = "Subnetwork hosting workstation instances"
 
-  network       = google_compute_network.vpc_network.id
+  network       = google_compute_network.network.id
   ip_cidr_range = cidrsubnet(local.base_cidr_block, 2, 0)
 }
 
@@ -150,13 +150,13 @@ resource "google_compute_route" "default_route" {
 }
 
 resource "google_compute_firewall" "default" {
-  name    = "default-firewall"
+  name    = "user-firewall"
   project = google_project.environment_project.project_id
   description = "Only allow connections from user public IP to workstation."
   direction = "INRGESS"
   priority = 0
-  network = google_compute_network.vpc_network.name
-  source_ranges = var.user.ip
+  network = google_compute_network.network.name
+  source_ranges = [ var.user.ip ]
 
   target_service_accounts = google_service_account.environment_account.email
 
@@ -266,7 +266,7 @@ resource "google_compute_instance" "workstation" {
     subnetwork = google_compute_subnetwork.subnetwork.self_link
 
     access_config {
-      nat_ip = google_compute_address.nat-address.address
+      nat_ip = google_compute_address.front_nat.address
     }
   }
 
@@ -279,7 +279,7 @@ resource "google_compute_instance" "workstation" {
 }
 
 resource "google_compute_address" "front_nat" {
-  name          = "nat-address"
+  name          = "front-address"
   description   = "External IP address for the workstation." 
   address_type  = "EXTERNAL"
   region        = var.region
