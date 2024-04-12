@@ -140,6 +140,7 @@ resource "google_compute_network" "network" {
 
 resource "google_compute_subnetwork" "subnetwork" {
   name        = join("-", ["workstations", "subnet"])
+  project     = google_project.environment_project.project_id
   description = "Subnetwork hosting workstation instances"
 
   network       = google_compute_network.network.id
@@ -154,7 +155,7 @@ resource "google_compute_route" "default_route" {
   dest_range       = "0.0.0.0/0"
   next_hop_gateway = "default-internet-gateway"
   priority         = 1000
-  tags             = [terraform.workspace]
+  tags             = [lower(terraform.workspace)]
 }
 
 resource "google_compute_firewall" "default" {
@@ -183,7 +184,7 @@ resource "google_compute_disk" "boot_disk" {
   description = "Data disk for the workstation."
 
   labels = {
-    environment = terraform.workspace
+    environment = lower(terraform.workspace)
   }
 
   image                     = "ubuntu-2204-lts"
