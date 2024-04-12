@@ -39,7 +39,7 @@ locals {
   // Default IP address range for the worksapce network
   base_cidr_block = "10.1.0.0/27"
   wrk_name        = lower(replace(data.google_folder.workspace_folder.display_name, " Workspace", ""))
-  name            = join("-", [terraform.workspace, local.wrk_name])
+  name            = lower(join("-", [terraform.workspace, local.wrk_name]))
 }
 
 resource "random_string" "random" {
