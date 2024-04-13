@@ -40,8 +40,7 @@ locals {
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
     "storage.googleapis.com",
-    "compute.googleapis.com",
-    "dns.googleapis.com"
+    "compute.googleapis.com"
   ]
   // Default IP address range for the worksapce network
   base_cidr_block = "10.1.0.0/27"
@@ -346,8 +345,6 @@ resource "google_compute_address" "front_nat" {
 }
 
 resource "google_dns_record_set" "frontend" {
-  provider = google.env
-
   name = "${local.environment}.${data.google_dns_managed_zone.working_zone.dns_name}"
   type = "A"
   ttl  = 300
@@ -355,8 +352,4 @@ resource "google_dns_record_set" "frontend" {
   managed_zone = data.google_dns_managed_zone.working_zone.name
 
   rrdatas = [google_compute_instance.workstation.network_interface[0].access_config[0].nat_ip]
-
-  depends_on = [
-    google_project_service.service["dns.googleapis.com"]
-  ]
 }
