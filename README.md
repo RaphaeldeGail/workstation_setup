@@ -14,6 +14,7 @@
 | Name | Version |
 |------|---------|
 | google | 5.21.0 |
+| google.env | 5.21.0 |
 | random | 3.6.0 |
 
 ## Modules

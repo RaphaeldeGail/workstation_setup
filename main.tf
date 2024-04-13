@@ -22,6 +22,12 @@ provider "google" {
   project = var.project
 }
 
+provider "google" {
+  alias   = "env"
+  region  = var.region
+  project = google_project.environment_project.project_id
+}
+
 provider "random" {
 }
 
@@ -38,8 +44,9 @@ locals {
   ]
   // Default IP address range for the worksapce network
   base_cidr_block = "10.1.0.0/27"
-  wrk_name        = lower(replace(data.google_folder.workspace_folder.display_name, " Workspace", ""))
-  name            = lower(join("-", [terraform.workspace, local.wrk_name]))
+  environment     = lower(terraform.workspace)
+  workspace       = lower(replace(data.google_folder.workspace_folder.display_name, " Workspace", ""))
+  name            = join("-", [local.environment, local.workspace])
 }
 
 resource "random_string" "random" {
@@ -54,13 +61,13 @@ resource "random_string" "random" {
 }
 
 resource "google_project" "environment_project" {
-  name       = terraform.workspace
+  name       = local.environment
   project_id = join("-", [local.name, random_string.random.result])
   folder_id  = var.folder
   labels = {
-    environment = lower(terraform.workspace)
+    environment = local.environment
   }
-  skip_delete = true
+  skip_delete = false
 
   lifecycle {
     ignore_changes = [billing_account]
@@ -72,10 +79,32 @@ resource "google_billing_project_info" "billing_association" {
   billing_account = var.billing_account
 }
 
+data "google_kms_key_ring" "key_ring" {
+  name     = "${local.workspace}-keyring"
+  location = var.region
+}
+
+data "google_kms_crypto_key" "symmetric_key" {
+  key_ring = data.google_kms_key_ring.key_ring.id
+  name     = "${local.workspace}-symmetric-key"
+}
+
+data "google_dns_managed_zone" "working_zone" {
+  name = var.dns_zone
+}
+
+resource "google_storage_bucket_iam_member" "shared_bucket_member" {
+  bucket = var.bucket
+  role   = "roles/storage.objectAdmin"
+  member = join(":", ["serviceAccount", google_service_account.environment_account.email])
+}
+
+##### #####
+
 resource "google_project_service" "service" {
   for_each = toset(local.apis)
+  provider = google.env
 
-  project = google_project.environment_project.project_id
   service = each.key
 
   timeouts {
@@ -88,10 +117,11 @@ resource "google_project_service" "service" {
 }
 
 resource "google_service_account" "environment_account" {
-  account_id   = join("-", [local.name, "admin"])
+  provider = google.env
+
+  account_id   = join("-", [local.environment, "admin"])
   display_name = join(" ", [title(local.name), "Admin", "Service", "Account"])
   description  = "Service account for the environment project."
-  project      = google_project.environment_project.project_id
 }
 
 resource "google_project_iam_binding" "instance_admins" {
@@ -103,18 +133,9 @@ resource "google_project_iam_binding" "instance_admins" {
   ]
 }
 
-data "google_kms_key_ring" "key_ring" {
-  project  = var.project
-  name     = "${local.wrk_name}-keyring"
-  location = var.region
-}
-
-data "google_kms_crypto_key" "symmetric_key" {
-  key_ring = data.google_kms_key_ring.key_ring.id
-  name     = "${local.wrk_name}-symmetric-key"
-}
-
 resource "google_kms_crypto_key_iam_member" "crypto_compute" {
+  provider = google.env
+
   crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
   member        = "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
@@ -125,7 +146,8 @@ resource "google_kms_crypto_key_iam_member" "crypto_compute" {
 }
 
 resource "google_compute_network" "network" {
-  project      = google_project.environment_project.project_id
+  provider = google.env
+
   name         = "${local.name}-network"
   description  = "Network for the ${local.name} environment."
   routing_mode = "REGIONAL"
@@ -139,8 +161,9 @@ resource "google_compute_network" "network" {
 }
 
 resource "google_compute_subnetwork" "subnetwork" {
+  provider = google.env
+
   name        = join("-", ["workstations", "subnet"])
-  project     = google_project.environment_project.project_id
   description = "Subnetwork hosting workstation instances"
 
   network       = google_compute_network.network.id
@@ -148,6 +171,8 @@ resource "google_compute_subnetwork" "subnetwork" {
 }
 
 resource "google_compute_route" "default_route" {
+  provider = google.env
+
   name        = join("-", ["from", local.name, "to", "internet"])
   description = "Default route from the workspace network to the internet"
 
@@ -155,19 +180,20 @@ resource "google_compute_route" "default_route" {
   dest_range       = "0.0.0.0/0"
   next_hop_gateway = "default-internet-gateway"
   priority         = 1000
-  tags             = [lower(terraform.workspace)]
+  tags             = [local.environment]
 }
 
 resource "google_compute_firewall" "default" {
+  provider = google.env
+
   name          = "user-firewall"
-  project       = google_project.environment_project.project_id
   description   = "Only allow connections from user public IP to workstation."
   direction     = "INGRESS"
   priority      = 0
   network       = google_compute_network.network.name
   source_ranges = [var.user.ip]
 
-  target_service_accounts = [ google_service_account.environment_account.email ]
+  target_service_accounts = [google_service_account.environment_account.email]
 
   allow {
     protocol = "tcp"
@@ -176,15 +202,17 @@ resource "google_compute_firewall" "default" {
 }
 
 data "google_compute_zones" "available" {
+  project = google_project.environment_project.project_id
 }
 
 resource "google_compute_disk" "boot_disk" {
-  project     = google_project.environment_project.project_id
+  provider = google.env
+
   name        = join("-", [local.name, "boot", "disk"])
   description = "Data disk for the workstation."
 
   labels = {
-    environment = lower(terraform.workspace)
+    environment = local.environment
   }
 
   image                     = "ubuntu-2204-lts"
@@ -203,8 +231,9 @@ resource "google_compute_disk" "boot_disk" {
 }
 
 resource "google_compute_resource_policy" "shutdown_policy" {
+  provider = google.env
+
   name = join("-", [local.name, "shutdown", "policy"])
-  project = google_project.environment_project.project_id
 
   instance_schedule_policy {
     vm_stop_schedule {
@@ -219,8 +248,9 @@ resource "google_compute_resource_policy" "shutdown_policy" {
 }
 
 resource "google_compute_resource_policy" "backup_policy" {
+  provider = google.env
+
   name = join("-", [local.name, "backup", "policy"])
-  project = google_project.environment_project.project_id
 
   snapshot_schedule_policy {
     schedule {
@@ -242,23 +272,21 @@ resource "google_compute_resource_policy" "backup_policy" {
 }
 
 resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachment" {
+  provider = google.env
+
   name = google_compute_resource_policy.backup_policy.name
   disk = google_compute_disk.boot_disk.name
   zone = google_compute_disk.boot_disk.zone
 }
 
-resource "google_storage_bucket_iam_member" "shared_bucket_member" {
-  bucket = var.bucket
-  role   = "roles/storage.objectAdmin"
-  member = join(":", ["serviceAccount", google_service_account.environment_account.email])
-}
-
 resource "google_compute_instance" "workstation" {
+  provider = google.env
+
   name        = join("-", [local.name, "workstation"])
   description = "Workstation instance for ${local.name}"
 
   zone           = google_compute_disk.boot_disk.zone
-  tags           = [terraform.workspace]
+  tags           = [local.environment]
   machine_type   = "e2-medium"
   can_ip_forward = false
 
@@ -302,20 +330,22 @@ resource "google_compute_instance" "workstation" {
 }
 
 resource "google_compute_address" "front_nat" {
+  provider = google.env
+
   name         = "front-address"
   description  = "External IP address for the workstation."
   address_type = "EXTERNAL"
   region       = var.region
-  project      = google_project.environment_project.project_id
-}
 
-data "google_dns_managed_zone" "working_zone" {
-  name    = var.dns_zone
-  project = var.project
+  depends_on = [
+    google_project_service.service["compute.googleapis.com"]
+  ]
 }
 
 resource "google_dns_record_set" "frontend" {
-  name = "${terraform.workspace}.${data.google_dns_managed_zone.working_zone.dns_name}"
+  provider = google.env
+
+  name = "${local.environment}.${data.google_dns_managed_zone.working_zone.dns_name}"
   type = "A"
   ttl  = 300
 
