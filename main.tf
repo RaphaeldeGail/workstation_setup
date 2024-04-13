@@ -326,7 +326,8 @@ resource "google_compute_instance" "workstation" {
   resource_policies = [google_compute_resource_policy.shutdown_policy.self_link]
 
   depends_on = [
-    google_project_service.service["compute.googleapis.com"]
+    google_project_service.service["compute.googleapis.com"],
+    google_project_iam_binding.instance_admins
   ]
 }
 
