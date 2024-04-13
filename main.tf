@@ -23,9 +23,13 @@ provider "google" {
 }
 
 provider "google" {
-  alias   = "env"
+  alias   = "environment"
   region  = var.region
+  zone    = data.google_compute_zones.available.names[0]
   project = google_project.environment_project.project_id
+  default_labels = {
+    environment = local.environment
+  }
 }
 
 provider "random" {
@@ -103,7 +107,7 @@ resource "google_storage_bucket_iam_member" "shared_bucket_member" {
 
 resource "google_project_service" "service" {
   for_each = toset(local.apis)
-  provider = google.env
+  provider = google.environment
 
   service = each.key
 
@@ -117,7 +121,7 @@ resource "google_project_service" "service" {
 }
 
 resource "google_service_account" "environment_account" {
-  provider = google.env
+  provider = google.environment
 
   account_id   = join("-", [local.environment, "admin"])
   display_name = join(" ", [title(local.name), "Admin", "Service", "Account"])
@@ -135,7 +139,7 @@ resource "google_project_iam_binding" "instance_admins" {
 }
 
 resource "google_kms_crypto_key_iam_member" "crypto_compute" {
-  provider = google.env
+  provider = google.environment
 
   crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
   role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
@@ -147,7 +151,7 @@ resource "google_kms_crypto_key_iam_member" "crypto_compute" {
 }
 
 resource "google_compute_network" "network" {
-  provider = google.env
+  provider = google.environment
 
   name         = "${local.name}-network"
   description  = "Network for the ${local.name} environment."
@@ -162,7 +166,7 @@ resource "google_compute_network" "network" {
 }
 
 resource "google_compute_subnetwork" "subnetwork" {
-  provider = google.env
+  provider = google.environment
 
   name        = join("-", ["workstations", "subnet"])
   description = "Subnetwork hosting workstation instances"
@@ -172,7 +176,7 @@ resource "google_compute_subnetwork" "subnetwork" {
 }
 
 resource "google_compute_route" "default_route" {
-  provider = google.env
+  provider = google.environment
 
   name        = join("-", ["from", local.name, "to", "internet"])
   description = "Default route from the workspace network to the internet"
@@ -185,7 +189,7 @@ resource "google_compute_route" "default_route" {
 }
 
 resource "google_compute_firewall" "default" {
-  provider = google.env
+  provider = google.environment
 
   name          = "user-firewall"
   description   = "Only allow connections from user public IP to workstation."
@@ -207,7 +211,7 @@ data "google_compute_zones" "available" {
 }
 
 resource "google_compute_disk" "boot_disk" {
-  provider = google.env
+  provider = google.environment
 
   name        = join("-", [local.name, "boot", "disk"])
   description = "Data disk for the workstation."
@@ -232,7 +236,7 @@ resource "google_compute_disk" "boot_disk" {
 }
 
 resource "google_compute_resource_policy" "shutdown_policy" {
-  provider = google.env
+  provider = google.environment
 
   name = join("-", [local.name, "shutdown", "policy"])
 
@@ -249,7 +253,7 @@ resource "google_compute_resource_policy" "shutdown_policy" {
 }
 
 resource "google_compute_resource_policy" "backup_policy" {
-  provider = google.env
+  provider = google.environment
 
   name = join("-", [local.name, "backup", "policy"])
 
@@ -273,7 +277,7 @@ resource "google_compute_resource_policy" "backup_policy" {
 }
 
 resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachment" {
-  provider = google.env
+  provider = google.environment
 
   name = google_compute_resource_policy.backup_policy.name
   disk = google_compute_disk.boot_disk.name
@@ -281,7 +285,7 @@ resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachm
 }
 
 resource "google_compute_instance" "workstation" {
-  provider = google.env
+  provider = google.environment
 
   name        = join("-", [local.name, "workstation"])
   description = "Workstation instance for ${local.name}"
@@ -332,7 +336,7 @@ resource "google_compute_instance" "workstation" {
 }
 
 resource "google_compute_address" "front_nat" {
-  provider = google.env
+  provider = google.environment
 
   name         = "front-address"
   description  = "External IP address for the workstation."
@@ -352,4 +356,11 @@ resource "google_dns_record_set" "frontend" {
   managed_zone = data.google_dns_managed_zone.working_zone.name
 
   rrdatas = [google_compute_instance.workstation.network_interface[0].access_config[0].nat_ip]
+}
+
+module "workstation" {
+  source = "./modules/workstation"
+  providers = {
+    google = google.environment
+  }
 }

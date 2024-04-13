@@ -19,7 +19,9 @@
 
 ## Modules
 
-No modules.
+| Name | Source | Version |
+|------|--------|---------|
+| workstation | ./modules/workstation | n/a |
 
 ## Resources
 
