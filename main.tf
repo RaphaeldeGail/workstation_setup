@@ -129,7 +129,8 @@ resource "google_project_iam_binding" "instance_admins" {
   role    = "roles/compute.instanceAdmin.v1"
 
   members = [
-    "group:${var.exec_group}"
+    "group:${var.exec_group}",
+    "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
   ]
 }
 
