@@ -32,12 +32,6 @@ variable "subnetwork" {
   nullable    = false
 }
 
-variable "nat_ip" {
-  type        = string
-  description = "The IP address for the front NAT of the workstation."
-  nullable    = false
-}
-
 variable "user" {
   type = object({
     ip   = string

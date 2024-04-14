@@ -284,19 +284,6 @@ resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachm
   zone = google_compute_disk.boot_disk.zone
 }
 
-resource "google_compute_address" "front_nat" {
-  provider = google.environment
-
-  name         = "front-address"
-  description  = "External IP address for the workstation."
-  address_type = "EXTERNAL"
-  region       = var.region
-
-  depends_on = [
-    google_project_service.service["compute.googleapis.com"]
-  ]
-}
-
 module "workstation" {
   source = "./modules/workstation"
   providers = {
@@ -312,7 +299,6 @@ module "workstation" {
     zone = google_compute_disk.boot_disk.zone
   }
   subnetwork = google_compute_subnetwork.subnetwork.self_link
-  nat_ip     = google_compute_address.front_nat.address
   user       = var.user
   policy     = google_compute_resource_policy.shutdown_policy.self_link
   dns_zone = {
@@ -327,11 +313,6 @@ module "workstation" {
 }
 
 moved {
-  from = google_compute_instance.workstation
-  to   = module.workstation.google_compute_instance.workstation
-}
-
-moved {
-  from = google_dns_record_set.frontend
-  to   = module.workstation.google_dns_record_set.frontend
+  from = google_compute_address.front_nat
+  to   = module.workstation.google_compute_address.front_nat
 }

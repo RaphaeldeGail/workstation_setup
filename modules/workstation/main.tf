@@ -39,7 +39,7 @@ resource "google_compute_instance" "workstation" {
     subnetwork = var.subnetwork
 
     access_config {
-      nat_ip = var.nat_ip
+      nat_ip = google_compute_address.front_nat.address
     }
   }
 
@@ -59,4 +59,10 @@ resource "google_dns_record_set" "frontend" {
   managed_zone = var.dns_zone.name
 
   rrdatas = [google_compute_instance.workstation.network_interface[0].access_config[0].nat_ip]
+}
+
+resource "google_compute_address" "front_nat" {
+  name         = "front-address"
+  description  = "External IP address for the workstation."
+  address_type = "EXTERNAL"
 }

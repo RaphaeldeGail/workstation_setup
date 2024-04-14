@@ -21,6 +21,7 @@ No modules.
 
 | Name | Type |
 |------|------|
+| [google_compute_address.front_nat](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_address) | resource |
 | [google_compute_instance.workstation](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_instance) | resource |
 | [google_dns_record_set.frontend](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_record_set) | resource |
 
@@ -32,7 +33,6 @@ No modules.
 | dns\_zone | The DNS zone for the workspace. | ```object({ name = string dns = string })``` | n/a |
 | environment | The name of the environment. | `string` | n/a |
 | name | The name of the workstation. | `string` | n/a |
-| nat\_ip | The IP address for the front NAT of the workstation. | `string` | n/a |
 | policy | The ID of the resource policy for the workstation. | `string` | n/a |
 | service\_account | The email for the service account attached to the workstation. | `string` | n/a |
 | subnetwork | The ID of the subnetwork hosting the workstation. | `string` | n/a |
