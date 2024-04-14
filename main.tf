@@ -284,57 +284,6 @@ resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachm
   zone = google_compute_disk.boot_disk.zone
 }
 
-resource "google_compute_instance" "workstation" {
-  provider = google.environment
-
-  name        = join("-", [local.name, "workstation"])
-  description = "Workstation instance for ${local.name}"
-
-  zone           = google_compute_disk.boot_disk.zone
-  tags           = [local.environment]
-  machine_type   = "e2-medium"
-  can_ip_forward = false
-
-  service_account {
-    email  = google_service_account.environment_account.email
-    scopes = ["cloud-platform"]
-  }
-
-  scheduling {
-    provisioning_model  = "SPOT"
-    on_host_maintenance = "TERMINATE"
-    preemptible         = true
-    automatic_restart   = false
-  }
-
-  boot_disk {
-    device_name = google_compute_disk.boot_disk.name
-    source      = google_compute_disk.boot_disk.id
-    auto_delete = false
-    mode        = "READ_WRITE"
-  }
-
-  network_interface {
-    subnetwork = google_compute_subnetwork.subnetwork.self_link
-
-    access_config {
-      nat_ip = google_compute_address.front_nat.address
-    }
-  }
-
-  metadata = {
-    block-project-ssh-keys = true
-    ssh-keys               = join(":", [trimspace(var.user.name), trimspace(var.user.key)])
-  }
-
-  resource_policies = [google_compute_resource_policy.shutdown_policy.self_link]
-
-  depends_on = [
-    google_project_service.service["compute.googleapis.com"],
-    google_project_iam_binding.instance_admins
-  ]
-}
-
 resource "google_compute_address" "front_nat" {
   provider = google.environment
 
@@ -348,19 +297,34 @@ resource "google_compute_address" "front_nat" {
   ]
 }
 
-resource "google_dns_record_set" "frontend" {
-  name = "${local.environment}.${data.google_dns_managed_zone.working_zone.dns_name}"
-  type = "A"
-  ttl  = 300
-
-  managed_zone = data.google_dns_managed_zone.working_zone.name
-
-  rrdatas = [google_compute_instance.workstation.network_interface[0].access_config[0].nat_ip]
-}
-
 module "workstation" {
   source = "./modules/workstation"
   providers = {
     google = google.environment
   }
+
+  name            = local.name
+  environment     = local.environment
+  service_account = google_service_account.environment_account.email
+  disk            = google_compute_disk.boot_disk
+  subnetwork      = google_compute_subnetwork.subnetwork.self_link
+  nat_ip          = google_compute_address.front_nat.address
+  user            = var.user
+  policy          = google_compute_resource_policy.shutdown_policy.self_link
+  dns_zone        = data.google_dns_managed_zone.working_zone
+
+  depends_on = [
+    google_project_service.service["compute.googleapis.com"],
+    google_project_iam_binding.instance_admins
+  ]
+}
+
+moved {
+  from = google_compute_instance.workstation
+  to   = module.workstation.google_compute_instance.workstation
+}
+
+moved {
+  from = google_dns_record_set.frontend
+  to   = module.workstation.google_dns_record_set.frontend
 }
