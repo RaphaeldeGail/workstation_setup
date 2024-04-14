@@ -306,12 +306,19 @@ module "workstation" {
   name            = local.name
   environment     = local.environment
   service_account = google_service_account.environment_account.email
-  disk            = google_compute_disk.boot_disk
-  subnetwork      = google_compute_subnetwork.subnetwork.self_link
-  nat_ip          = google_compute_address.front_nat.address
-  user            = var.user
-  policy          = google_compute_resource_policy.shutdown_policy.self_link
-  dns_zone        = data.google_dns_managed_zone.working_zone
+  disk = {
+    name = google_compute_disk.boot_disk.name
+    id   = google_compute_disk.boot_disk.id
+    zone = google_compute_disk.boot_disk.zone
+  }
+  subnetwork = google_compute_subnetwork.subnetwork.self_link
+  nat_ip     = google_compute_address.front_nat.address
+  user       = var.user
+  policy     = google_compute_resource_policy.shutdown_policy.self_link
+  dns_zone = {
+    name = data.google_dns_managed_zone.working_zone.name
+    dns  = data.google_dns_managed_zone.working_zone.dns_name
+  }
 
   depends_on = [
     google_project_service.service["compute.googleapis.com"],

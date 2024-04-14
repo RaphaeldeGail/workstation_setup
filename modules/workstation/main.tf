@@ -52,7 +52,7 @@ resource "google_compute_instance" "workstation" {
 }
 
 resource "google_dns_record_set" "frontend" {
-  name = "${var.environment}.${var.dns_zone.dns_name}"
+  name = "${var.environment}.${var.dns_zone.dns}"
   type = "A"
   ttl  = 300
 

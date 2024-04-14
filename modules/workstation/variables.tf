@@ -17,7 +17,11 @@ variable "service_account" {
 }
 
 variable "disk" {
-  type        = map(string)
+  type = object({
+    name = string
+    id   = string
+    zone = string
+  })
   description = "The disk attached to the workstation."
   nullable    = false
 }
@@ -52,7 +56,10 @@ variable "policy" {
 }
 
 variable "dns_zone" {
-  type        = map(string)
+  type = object({
+    name = string
+    dns  = string
+  })
   description = "The DNS zone for the workspace."
   nullable    = false
 }

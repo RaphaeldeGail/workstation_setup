@@ -28,8 +28,8 @@ No modules.
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| disk | The disk attached to the workstation. | `map(string)` | n/a |
-| dns\_zone | The DNS zone for the workspace. | `map(string)` | n/a |
+| disk | The disk attached to the workstation. | ```object({ name = string id = string zone = string })``` | n/a |
+| dns\_zone | The DNS zone for the workspace. | ```object({ name = string dns = string })``` | n/a |
 | environment | The name of the environment. | `string` | n/a |
 | name | The name of the workstation. | `string` | n/a |
 | nat\_ip | The IP address for the front NAT of the workstation. | `string` | n/a |
