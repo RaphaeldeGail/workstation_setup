@@ -16,12 +16,6 @@ variable "service_account" {
   nullable    = false
 }
 
-variable "subnetwork" {
-  type        = string
-  description = "The ID of the subnetwork hosting the workstation."
-  nullable    = false
-}
-
 variable "user" {
   type = object({
     ip   = string
@@ -30,12 +24,6 @@ variable "user" {
   })
 
   description = "An object declaring a user with access authorization to the workstation."
-  nullable    = false
-}
-
-variable "policy" {
-  type        = string
-  description = "The ID of the resource policy for the workstation."
   nullable    = false
 }
 

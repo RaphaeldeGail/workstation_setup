@@ -46,11 +46,9 @@ locals {
     "storage.googleapis.com",
     "compute.googleapis.com"
   ]
-  // Default IP address range for the worksapce network
-  base_cidr_block = "10.1.0.0/27"
-  environment     = lower(terraform.workspace)
-  workspace       = lower(replace(data.google_folder.workspace_folder.display_name, " Workspace", ""))
-  name            = join("-", [local.environment, local.workspace])
+  environment = lower(terraform.workspace)
+  workspace   = lower(replace(data.google_folder.workspace_folder.display_name, " Workspace", ""))
+  name        = join("-", [local.environment, local.workspace])
 }
 
 resource "random_string" "random" {
@@ -150,81 +148,8 @@ resource "google_kms_crypto_key_iam_member" "crypto_compute" {
   ]
 }
 
-resource "google_compute_network" "network" {
-  provider = google.environment
-
-  name         = "${local.name}-network"
-  description  = "Network for the ${local.name} environment."
-  routing_mode = "REGIONAL"
-
-  auto_create_subnetworks         = false
-  delete_default_routes_on_create = true
-
-  depends_on = [
-    google_project_service.service["compute.googleapis.com"]
-  ]
-}
-
-resource "google_compute_subnetwork" "subnetwork" {
-  provider = google.environment
-
-  name        = join("-", ["workstations", "subnet"])
-  description = "Subnetwork hosting workstation instances"
-
-  network       = google_compute_network.network.id
-  ip_cidr_range = cidrsubnet(local.base_cidr_block, 2, 0)
-}
-
-resource "google_compute_route" "default_route" {
-  provider = google.environment
-
-  name        = join("-", ["from", local.name, "to", "internet"])
-  description = "Default route from the workspace network to the internet"
-
-  network          = google_compute_network.network.name
-  dest_range       = "0.0.0.0/0"
-  next_hop_gateway = "default-internet-gateway"
-  priority         = 1000
-  tags             = [local.environment]
-}
-
-resource "google_compute_firewall" "default" {
-  provider = google.environment
-
-  name          = "user-firewall"
-  description   = "Only allow connections from user public IP to workstation."
-  direction     = "INGRESS"
-  priority      = 0
-  network       = google_compute_network.network.name
-  source_ranges = [var.user.ip]
-
-  target_service_accounts = [google_service_account.environment_account.email]
-
-  allow {
-    protocol = "tcp"
-    ports    = ["22", "8080-8090"]
-  }
-}
-
 data "google_compute_zones" "available" {
   project = google_project.environment_project.project_id
-}
-
-resource "google_compute_resource_policy" "shutdown_policy" {
-  provider = google.environment
-
-  name = join("-", [local.name, "shutdown", "policy"])
-
-  instance_schedule_policy {
-    vm_stop_schedule {
-      schedule = "0 20 * * *"
-    }
-    time_zone = "Europe/Paris"
-  }
-
-  depends_on = [
-    google_project_service.service["compute.googleapis.com"]
-  ]
 }
 
 module "workstation" {
@@ -236,9 +161,7 @@ module "workstation" {
   name            = local.name
   environment     = local.environment
   service_account = google_service_account.environment_account.email
-  subnetwork      = google_compute_subnetwork.subnetwork.self_link
   user            = var.user
-  policy          = google_compute_resource_policy.shutdown_policy.self_link
   dns_zone = {
     name = data.google_dns_managed_zone.working_zone.name
     dns  = data.google_dns_managed_zone.working_zone.dns_name
@@ -253,16 +176,26 @@ module "workstation" {
 }
 
 moved {
-  from = google_compute_disk.boot_disk
-  to   = module.workstation.google_compute_disk.boot_disk
+  from = google_compute_resource_policy.shutdown_policy
+  to   = module.workstation.google_compute_resource_policy.shutdown_policy
 }
 
 moved {
-  from = google_compute_resource_policy.backup_policy
-  to   = module.workstation.google_compute_resource_policy.backup_policy
+  from = google_compute_network.network
+  to   = module.workstation.google_compute_network.network
 }
 
 moved {
-  from = google_compute_disk_resource_policy_attachment.backup_policy_attachment
-  to   = module.workstation.google_compute_disk_resource_policy_attachment.backup_policy_attachment
+  from = google_compute_subnetwork.subnetwork
+  to   = module.workstation.google_compute_subnetwork.subnetwork
+}
+
+moved {
+  from = google_compute_route.default_route
+  to   = module.workstation.google_compute_route.default_route
+}
+
+moved {
+  from = google_compute_firewall.default
+  to   = module.workstation.google_compute_firewall.default
 }

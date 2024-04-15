@@ -7,6 +7,55 @@ terraform {
   }
 }
 
+locals {
+  // Default IP address range for the worksapce network
+  base_cidr_block = "10.1.0.0/27"
+}
+
+resource "google_compute_network" "network" {
+  name         = "${var.name}-network"
+  description  = "Network for the ${var.name} environment."
+  routing_mode = "REGIONAL"
+
+  auto_create_subnetworks         = false
+  delete_default_routes_on_create = true
+}
+
+resource "google_compute_subnetwork" "subnetwork" {
+  name        = join("-", ["workstations", "subnet"])
+  description = "Subnetwork hosting workstation instances"
+
+  network       = google_compute_network.network.id
+  ip_cidr_range = cidrsubnet(local.base_cidr_block, 2, 0)
+}
+
+resource "google_compute_route" "default_route" {
+  name        = join("-", ["from", var.name, "to", "internet"])
+  description = "Default route from the workspace network to the internet"
+
+  network          = google_compute_network.network.name
+  dest_range       = "0.0.0.0/0"
+  next_hop_gateway = "default-internet-gateway"
+  priority         = 1000
+  tags             = [var.environment]
+}
+
+resource "google_compute_firewall" "default" {
+  name          = "user-firewall"
+  description   = "Only allow connections from user public IP to workstation."
+  direction     = "INGRESS"
+  priority      = 0
+  network       = google_compute_network.network.name
+  source_ranges = [var.user.ip]
+
+  target_service_accounts = [var.service_account]
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22", "8080-8090"]
+  }
+}
+
 resource "google_compute_disk" "boot_disk" {
   name        = join("-", [var.name, "boot", "disk"])
   description = "Data disk for the workstation."
@@ -45,6 +94,17 @@ resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachm
   zone = google_compute_disk.boot_disk.zone
 }
 
+resource "google_compute_resource_policy" "shutdown_policy" {
+  name = join("-", [var.name, "shutdown", "policy"])
+
+  instance_schedule_policy {
+    vm_stop_schedule {
+      schedule = "0 20 * * *"
+    }
+    time_zone = "Europe/Paris"
+  }
+}
+
 resource "google_compute_instance" "workstation" {
   name        = var.name
   description = "Workstation instance for ${var.name}"
@@ -74,7 +134,7 @@ resource "google_compute_instance" "workstation" {
   }
 
   network_interface {
-    subnetwork = var.subnetwork
+    subnetwork = google_compute_subnetwork.subnetwork.self_link
 
     access_config {
       nat_ip = google_compute_address.front_nat.address
@@ -86,7 +146,9 @@ resource "google_compute_instance" "workstation" {
     ssh-keys               = join(":", [trimspace(var.user.name), trimspace(var.user.key)])
   }
 
-  resource_policies = [var.policy]
+  resource_policies = [
+    google_compute_resource_policy.shutdown_policy.self_link
+  ]
 }
 
 resource "google_dns_record_set" "frontend" {
@@ -96,7 +158,9 @@ resource "google_dns_record_set" "frontend" {
 
   managed_zone = var.dns_zone.name
 
-  rrdatas = [google_compute_instance.workstation.network_interface[0].access_config[0].nat_ip]
+  rrdatas = [
+    google_compute_instance.workstation.network_interface[0].access_config[0].nat_ip
+  ]
 }
 
 resource "google_compute_address" "front_nat" {
