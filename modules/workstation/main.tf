@@ -7,11 +7,49 @@ terraform {
   }
 }
 
+resource "google_compute_disk" "boot_disk" {
+  name        = join("-", [var.name, "boot", "disk"])
+  description = "Data disk for the workstation."
+
+  image                     = "ubuntu-2204-lts"
+  size                      = 30 # 30*0.04$ = 1.20$ per month, for I/O performance see: https://cloud.google.com/compute/docs/disks/performance
+  type                      = "pd-standard"
+  physical_block_size_bytes = 4096
+
+  disk_encryption_key {
+    kms_key_self_link = var.kms_key
+  }
+}
+
+resource "google_compute_resource_policy" "backup_policy" {
+  name = join("-", [var.name, "backup", "policy"])
+
+  snapshot_schedule_policy {
+    schedule {
+      weekly_schedule {
+        day_of_weeks {
+          start_time = "19:00"
+          day        = "SUNDAY"
+        }
+      }
+    }
+    retention_policy {
+      max_retention_days = 15
+    }
+  }
+}
+
+resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachment" {
+  name = google_compute_resource_policy.backup_policy.name
+  disk = google_compute_disk.boot_disk.name
+  zone = google_compute_disk.boot_disk.zone
+}
+
 resource "google_compute_instance" "workstation" {
   name        = var.name
   description = "Workstation instance for ${var.name}"
 
-  zone           = var.disk.zone
+  zone           = google_compute_disk.boot_disk.zone
   tags           = [var.environment]
   machine_type   = "e2-medium"
   can_ip_forward = false
@@ -29,8 +67,8 @@ resource "google_compute_instance" "workstation" {
   }
 
   boot_disk {
-    device_name = var.disk.name
-    source      = var.disk.id
+    device_name = google_compute_disk.boot_disk.name
+    source      = google_compute_disk.boot_disk.id
     auto_delete = false
     mode        = "READ_WRITE"
   }

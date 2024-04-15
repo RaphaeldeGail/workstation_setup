@@ -16,16 +16,6 @@ variable "service_account" {
   nullable    = false
 }
 
-variable "disk" {
-  type = object({
-    name = string
-    id   = string
-    zone = string
-  })
-  description = "The disk attached to the workstation."
-  nullable    = false
-}
-
 variable "subnetwork" {
   type        = string
   description = "The ID of the subnetwork hosting the workstation."
@@ -55,5 +45,11 @@ variable "dns_zone" {
     dns  = string
   })
   description = "The DNS zone for the workspace."
+  nullable    = false
+}
+
+variable "kms_key" {
+  type        = string
+  description = "The ID for the KMS key to encrypt disk data."
   nullable    = false
 }

@@ -210,31 +210,6 @@ data "google_compute_zones" "available" {
   project = google_project.environment_project.project_id
 }
 
-resource "google_compute_disk" "boot_disk" {
-  provider = google.environment
-
-  name        = join("-", [local.name, "boot", "disk"])
-  description = "Data disk for the workstation."
-
-  labels = {
-    environment = local.environment
-  }
-
-  image                     = "ubuntu-2204-lts"
-  size                      = 30 # 30*0.04$ = 1.20$ per month, for I/O performance see: https://cloud.google.com/compute/docs/disks/performance
-  type                      = "pd-standard"
-  physical_block_size_bytes = 4096
-  zone                      = data.google_compute_zones.available.names[0]
-
-  disk_encryption_key {
-    kms_key_self_link = data.google_kms_crypto_key.symmetric_key.id
-  }
-
-  depends_on = [
-    google_kms_crypto_key_iam_member.crypto_compute
-  ]
-}
-
 resource "google_compute_resource_policy" "shutdown_policy" {
   provider = google.environment
 
@@ -252,38 +227,6 @@ resource "google_compute_resource_policy" "shutdown_policy" {
   ]
 }
 
-resource "google_compute_resource_policy" "backup_policy" {
-  provider = google.environment
-
-  name = join("-", [local.name, "backup", "policy"])
-
-  snapshot_schedule_policy {
-    schedule {
-      weekly_schedule {
-        day_of_weeks {
-          start_time = "19:00"
-          day        = "SUNDAY"
-        }
-      }
-    }
-    retention_policy {
-      max_retention_days = 15
-    }
-  }
-
-  depends_on = [
-    google_project_service.service["compute.googleapis.com"]
-  ]
-}
-
-resource "google_compute_disk_resource_policy_attachment" "backup_policy_attachment" {
-  provider = google.environment
-
-  name = google_compute_resource_policy.backup_policy.name
-  disk = google_compute_disk.boot_disk.name
-  zone = google_compute_disk.boot_disk.zone
-}
-
 module "workstation" {
   source = "./modules/workstation"
   providers = {
@@ -293,26 +236,33 @@ module "workstation" {
   name            = local.name
   environment     = local.environment
   service_account = google_service_account.environment_account.email
-  disk = {
-    name = google_compute_disk.boot_disk.name
-    id   = google_compute_disk.boot_disk.id
-    zone = google_compute_disk.boot_disk.zone
-  }
-  subnetwork = google_compute_subnetwork.subnetwork.self_link
-  user       = var.user
-  policy     = google_compute_resource_policy.shutdown_policy.self_link
+  subnetwork      = google_compute_subnetwork.subnetwork.self_link
+  user            = var.user
+  policy          = google_compute_resource_policy.shutdown_policy.self_link
   dns_zone = {
     name = data.google_dns_managed_zone.working_zone.name
     dns  = data.google_dns_managed_zone.working_zone.dns_name
   }
+  kms_key = data.google_kms_crypto_key.symmetric_key.id
 
   depends_on = [
     google_project_service.service["compute.googleapis.com"],
-    google_project_iam_binding.instance_admins
+    google_project_iam_binding.instance_admins,
+    google_kms_crypto_key_iam_member.crypto_compute
   ]
 }
 
 moved {
-  from = google_compute_address.front_nat
-  to   = module.workstation.google_compute_address.front_nat
+  from = google_compute_disk.boot_disk
+  to   = module.workstation.google_compute_disk.boot_disk
+}
+
+moved {
+  from = google_compute_resource_policy.backup_policy
+  to   = module.workstation.google_compute_resource_policy.backup_policy
+}
+
+moved {
+  from = google_compute_disk_resource_policy_attachment.backup_policy_attachment
+  to   = module.workstation.google_compute_disk_resource_policy_attachment.backup_policy_attachment
 }
