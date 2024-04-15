@@ -27,15 +27,6 @@ variable "user" {
   nullable    = false
 }
 
-variable "dns_zone" {
-  type = object({
-    name = string
-    dns  = string
-  })
-  description = "The DNS zone for the workspace."
-  nullable    = false
-}
-
 variable "kms_key" {
   type        = string
   description = "The ID for the KMS key to encrypt disk data."

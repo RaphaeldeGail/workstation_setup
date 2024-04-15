@@ -40,12 +40,6 @@ variable "exec_group" {
   nullable    = false
 }
 
-variable "principal_set" {
-  type        = string
-  description = "The principal set."
-  nullable    = false
-}
-
 variable "user" {
   type = object({
     ip   = string

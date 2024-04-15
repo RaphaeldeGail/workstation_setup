@@ -81,6 +81,10 @@ resource "google_billing_project_info" "billing_association" {
   billing_account = var.billing_account
 }
 
+data "google_compute_zones" "available" {
+  project = google_project.environment_project.project_id
+}
+
 data "google_kms_key_ring" "key_ring" {
   name     = "${local.workspace}-keyring"
   location = var.region
@@ -134,22 +138,16 @@ resource "google_project_iam_binding" "instance_admins" {
     "group:${var.exec_group}",
     "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
   ]
-}
-
-resource "google_kms_crypto_key_iam_member" "crypto_compute" {
-  provider = google.environment
-
-  crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
 
   depends_on = [
     google_project_service.service["iam.googleapis.com"]
   ]
 }
 
-data "google_compute_zones" "available" {
-  project = google_project.environment_project.project_id
+resource "google_kms_crypto_key_iam_member" "crypto_compute" {
+  crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
 }
 
 module "workstation" {
@@ -162,11 +160,7 @@ module "workstation" {
   environment     = local.environment
   service_account = google_service_account.environment_account.email
   user            = var.user
-  dns_zone = {
-    name = data.google_dns_managed_zone.working_zone.name
-    dns  = data.google_dns_managed_zone.working_zone.dns_name
-  }
-  kms_key = data.google_kms_crypto_key.symmetric_key.id
+  kms_key         = data.google_kms_crypto_key.symmetric_key.id
 
   depends_on = [
     google_project_service.service["compute.googleapis.com"],
@@ -175,27 +169,14 @@ module "workstation" {
   ]
 }
 
-moved {
-  from = google_compute_resource_policy.shutdown_policy
-  to   = module.workstation.google_compute_resource_policy.shutdown_policy
-}
+resource "google_dns_record_set" "frontend" {
+  name = "${local.environment}.${data.google_dns_managed_zone.working_zone.dns_name}"
+  type = "A"
+  ttl  = 300
 
-moved {
-  from = google_compute_network.network
-  to   = module.workstation.google_compute_network.network
-}
+  managed_zone = data.google_dns_managed_zone.working_zone.name
 
-moved {
-  from = google_compute_subnetwork.subnetwork
-  to   = module.workstation.google_compute_subnetwork.subnetwork
-}
-
-moved {
-  from = google_compute_route.default_route
-  to   = module.workstation.google_compute_route.default_route
-}
-
-moved {
-  from = google_compute_firewall.default
-  to   = module.workstation.google_compute_firewall.default
+  rrdatas = [
+    module.workstation.nat_ip
+  ]
 }

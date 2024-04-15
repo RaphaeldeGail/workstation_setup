@@ -120,10 +120,11 @@ resource "google_compute_instance" "workstation" {
   }
 
   scheduling {
-    provisioning_model  = "SPOT"
-    on_host_maintenance = "TERMINATE"
-    preemptible         = true
-    automatic_restart   = false
+    provisioning_model          = "SPOT"
+    instance_termination_action = "STOP"
+    on_host_maintenance         = "TERMINATE"
+    preemptible                 = true
+    automatic_restart           = false
   }
 
   boot_disk {
@@ -148,18 +149,6 @@ resource "google_compute_instance" "workstation" {
 
   resource_policies = [
     google_compute_resource_policy.shutdown_policy.self_link
-  ]
-}
-
-resource "google_dns_record_set" "frontend" {
-  name = "${var.environment}.${var.dns_zone.dns}"
-  type = "A"
-  ttl  = 300
-
-  managed_zone = var.dns_zone.name
-
-  rrdatas = [
-    google_compute_instance.workstation.network_interface[0].access_config[0].nat_ip
   ]
 }
 

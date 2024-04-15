@@ -28,6 +28,7 @@
 | Name | Type |
 |------|------|
 | [google_billing_project_info.billing_association](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/billing_project_info) | resource |
+| [google_dns_record_set.frontend](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/dns_record_set) | resource |
 | [google_kms_crypto_key_iam_member.crypto_compute](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/kms_crypto_key_iam_member) | resource |
 | [google_project.environment_project](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project) | resource |
 | [google_project_iam_binding.instance_admins](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project_iam_binding) | resource |
@@ -50,7 +51,6 @@
 | dns\_zone | The DNS zone for the workspace. | `string` | n/a |
 | exec\_group | The email address of the Google group with usage permissions for the workstation. | `string` | n/a |
 | folder | The ID of the Workspace Folder. | `number` | n/a |
-| principal\_set | The principal set. | `string` | n/a |
 | project | The ID of the admin project. | `string` | n/a |
 | region | Geographical *region* for Google Cloud Platform. | `string` | n/a |
 | user | An object declaring a user with access authorization to the workstation. | ```object({ ip = string name = string key = string })``` | n/a |
