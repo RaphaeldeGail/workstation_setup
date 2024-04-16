@@ -36,7 +36,6 @@ No modules.
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
-| environment | The name of the environment. | `string` | n/a |
 | kms\_key | The ID for the KMS key to encrypt disk data. | `string` | n/a |
 | name | The name of the workstation. | `string` | n/a |
 | service\_account | The email for the service account attached to the workstation. | `string` | n/a |

@@ -37,7 +37,7 @@ resource "google_compute_route" "default_route" {
   dest_range       = "0.0.0.0/0"
   next_hop_gateway = "default-internet-gateway"
   priority         = 1000
-  tags             = [var.environment]
+  tags             = [var.name]
 }
 
 resource "google_compute_firewall" "default" {
@@ -110,7 +110,7 @@ resource "google_compute_instance" "workstation" {
   description = "Workstation instance for ${var.name}"
 
   zone           = google_compute_disk.boot_disk.zone
-  tags           = [var.environment]
+  tags           = [var.name]
   machine_type   = "e2-medium"
   can_ip_forward = false
 

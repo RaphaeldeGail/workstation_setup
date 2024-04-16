@@ -4,12 +4,6 @@ variable "name" {
   nullable    = false
 }
 
-variable "environment" {
-  type        = string
-  description = "The name of the environment."
-  nullable    = false
-}
-
 variable "service_account" {
   type        = string
   description = "The email for the service account attached to the workstation."

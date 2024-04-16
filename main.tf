@@ -157,7 +157,6 @@ module "workstation" {
   }
 
   name            = local.name
-  environment     = local.environment
   service_account = google_service_account.environment_account.email
   user            = var.user
   kms_key         = data.google_kms_crypto_key.symmetric_key.id
