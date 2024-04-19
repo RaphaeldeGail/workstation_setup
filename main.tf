@@ -102,7 +102,7 @@ data "google_dns_managed_zone" "working_zone" {
 resource "google_storage_bucket_iam_member" "shared_bucket_member" {
   bucket = var.bucket
   role   = "roles/storage.objectAdmin"
-  member = join(":", ["serviceAccount", google_service_account.environment_account.email])
+  member = join(":", ["serviceAccount", module.workstation.service_account])
 }
 
 ##### #####
@@ -120,14 +120,6 @@ resource "google_project_service" "service" {
 
   disable_dependent_services = true
   disable_on_destroy         = true
-}
-
-resource "google_service_account" "environment_account" {
-  provider = google.environment
-
-  account_id   = join("-", [local.environment, "admin"])
-  display_name = join(" ", [title(local.name), "Admin", "Service", "Account"])
-  description  = "Service account for the environment project."
 }
 
 resource "google_project_iam_binding" "instance_admins" {
@@ -151,13 +143,11 @@ resource "google_kms_crypto_key_iam_member" "crypto_compute" {
 }
 
 module "workstation" {
-  source = "./modules/workstation"
+  source = "github.com/RaphaeldeGail/legendary-workstation?ref=refs/heads/main"
   providers = {
     google = google.environment
   }
 
-  name            = local.name
-  service_account = google_service_account.environment_account.email
   user            = var.user
   kms_key         = data.google_kms_crypto_key.symmetric_key.id
 
