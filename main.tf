@@ -143,7 +143,7 @@ resource "google_kms_crypto_key_iam_member" "crypto_compute" {
 }
 
 module "workstation" {
-  source = "github.com/RaphaeldeGail/legendary-workstation?ref=main"
+  source = "github.com/RaphaeldeGail/legendary-workstation?ref=feature%2Fmanage-workstation"
   providers = {
     google = google.environment
   }
