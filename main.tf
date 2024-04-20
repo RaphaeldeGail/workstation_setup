@@ -20,13 +20,16 @@ terraform {
 provider "google" {
   region  = var.region
   project = var.project
+  default_labels = {
+    environment = local.environment
+  }
 }
 
 provider "google" {
   alias   = "environment"
   region  = var.region
-  zone    = data.google_compute_zones.available.names[0]
-  project = google_project.environment_project.project_id
+  zone    = module.environment_project.compute_zones[0]
+  project = module.environment_project.project_id
   default_labels = {
     environment = local.environment
   }
@@ -35,111 +38,31 @@ provider "google" {
 provider "random" {
 }
 
-data "google_folder" "workspace_folder" {
+module "admin_data" {
+  source = "./modules/admin_data"
+
   folder = var.folder
+  region = var.region
 }
 
 locals {
   apis = [
     "iam.googleapis.com",
-    "iamcredentials.googleapis.com",
-    "storage.googleapis.com",
     "compute.googleapis.com"
   ]
   environment = lower(terraform.workspace)
-  workspace   = lower(replace(data.google_folder.workspace_folder.display_name, " Workspace", ""))
-  name        = join("-", [local.environment, local.workspace])
+  name        = join("-", [local.environment, module.admin_data.workspace_name])
 }
 
-resource "random_string" "random" {
-  length      = 4
-  keepers     = null
-  lower       = true
-  min_lower   = 2
-  numeric     = true
-  min_numeric = 2
-  upper       = false
-  special     = false
-}
+module "environment_project" {
+  source = "./modules/environment_project"
 
-resource "google_project" "environment_project" {
-  name       = local.environment
-  project_id = join("-", [local.name, random_string.random.result])
-  folder_id  = var.folder
-  labels = {
-    environment = local.environment
-  }
-  skip_delete = false
-
-  lifecycle {
-    ignore_changes = [billing_account]
-  }
-}
-
-resource "google_billing_project_info" "billing_association" {
-  project         = google_project.environment_project.project_id
+  name            = local.name
+  folder          = var.folder
   billing_account = var.billing_account
-}
-
-data "google_compute_zones" "available" {
-  project = google_project.environment_project.project_id
-}
-
-data "google_kms_key_ring" "key_ring" {
-  name     = "${local.workspace}-keyring"
-  location = var.region
-}
-
-data "google_kms_crypto_key" "symmetric_key" {
-  key_ring = data.google_kms_key_ring.key_ring.id
-  name     = "${local.workspace}-symmetric-key"
-}
-
-data "google_dns_managed_zone" "working_zone" {
-  name = var.dns_zone
-}
-
-resource "google_storage_bucket_iam_member" "shared_bucket_member" {
-  bucket = var.bucket
-  role   = "roles/storage.objectAdmin"
-  member = join(":", ["serviceAccount", module.workstation.service_account])
-}
-
-##### #####
-
-resource "google_project_service" "service" {
-  for_each = toset(local.apis)
-  provider = google.environment
-
-  service = each.key
-
-  timeouts {
-    create = "30m"
-    update = "40m"
-  }
-
-  disable_dependent_services = true
-  disable_on_destroy         = true
-}
-
-resource "google_project_iam_binding" "instance_admins" {
-  project = google_project.environment_project.project_id
-  role    = "roles/compute.instanceAdmin.v1"
-
-  members = [
-    "group:${var.exec_group}",
-    "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
-  ]
-
-  depends_on = [
-    google_project_service.service["iam.googleapis.com"]
-  ]
-}
-
-resource "google_kms_crypto_key_iam_member" "crypto_compute" {
-  crypto_key_id = data.google_kms_crypto_key.symmetric_key.id
-  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
-  member        = "serviceAccount:service-${google_project.environment_project.number}@compute-system.iam.gserviceaccount.com"
+  apis            = toset(local.apis)
+  exec_group      = var.exec_group
+  key_id          = module.admin_data.key_id
 }
 
 module "workstation" {
@@ -148,24 +71,28 @@ module "workstation" {
     google = google.environment
   }
 
-  user            = var.user
-  kms_key         = data.google_kms_crypto_key.symmetric_key.id
+  user    = var.user
+  kms_key = module.admin_data.key_id
 
   depends_on = [
-    google_project_service.service["compute.googleapis.com"],
-    google_project_iam_binding.instance_admins,
-    google_kms_crypto_key_iam_member.crypto_compute
+    module.environment_project
   ]
 }
 
 resource "google_dns_record_set" "frontend" {
-  name = "${local.environment}.${data.google_dns_managed_zone.working_zone.dns_name}"
+  name = "${local.environment}.${module.admin_data.dns.domain}"
   type = "A"
   ttl  = 300
 
-  managed_zone = data.google_dns_managed_zone.working_zone.name
+  managed_zone = module.admin_data.dns.name
 
   rrdatas = [
     module.workstation.nat_ip
   ]
+}
+
+resource "google_storage_bucket_iam_member" "shared_bucket_member" {
+  bucket = var.bucket
+  role   = "roles/storage.objectAdmin"
+  member = join(":", ["serviceAccount", module.workstation.service_account])
 }
