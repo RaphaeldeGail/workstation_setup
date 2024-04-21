@@ -4,6 +4,12 @@ variable "billing_account" {
   nullable    = false
 }
 
+variable "workspace" {
+  type        = string
+  description = "The name of the workspace."
+  nullable    = false
+}
+
 variable "folder" {
   type        = number
   description = "The ID of the Workspace Folder."
@@ -25,12 +31,6 @@ variable "region" {
 variable "bucket" {
   type        = string
   description = "The name of the administrator bucket."
-  nullable    = false
-}
-
-variable "dns_zone" {
-  type        = string
-  description = "The DNS zone for the workspace."
   nullable    = false
 }
 
