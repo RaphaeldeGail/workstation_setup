@@ -10,6 +10,10 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.21.0"
     }
+    google-beta = {
+      source = "hashicorp/google-beta"
+      version = "~> 5.25.0"
+    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.6.0"
@@ -18,6 +22,14 @@ terraform {
 }
 
 provider "google" {
+  region  = var.region
+  project = var.admin_project
+  default_labels = {
+    environment = local.environment
+  }
+}
+
+provider "google-beta" {
   region  = var.region
   project = var.admin_project
   default_labels = {
