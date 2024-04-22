@@ -4,19 +4,19 @@ variable "billing_account" {
   nullable    = false
 }
 
-variable "workspace" {
+variable "name" {
   type        = string
   description = "The name of the workspace."
   nullable    = false
 }
 
-variable "folder" {
+variable "workspace_folder" {
   type        = number
   description = "The ID of the Workspace Folder."
   nullable    = false
 }
 
-variable "project" {
+variable "admin_project" {
   type        = string
   description = "The ID of the admin project."
   nullable    = false

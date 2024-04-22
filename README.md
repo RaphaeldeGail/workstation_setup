@@ -28,14 +28,14 @@ No resources.
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
+| admin\_project | The ID of the admin project. | `string` | n/a |
 | billing\_account | The ID of the billing account used for the workspace. "Billing account User" permissions are required to execute module. | `string` | n/a |
 | bucket | The name of the administrator bucket. | `string` | n/a |
 | exec\_group | The email address of the Google group with usage permissions for the workstation. | `string` | n/a |
-| folder | The ID of the Workspace Folder. | `number` | n/a |
-| project | The ID of the admin project. | `string` | n/a |
+| name | The name of the workspace. | `string` | n/a |
 | region | Geographical *region* for Google Cloud Platform. | `string` | n/a |
 | user | An object declaring a user with access authorization to the workstation. | ```object({ ip = string name = string key = string })``` | n/a |
-| workspace | The name of the workspace. | `string` | n/a |
+| workspace\_folder | The ID of the Workspace Folder. | `number` | n/a |
 
 ## Outputs
 
