@@ -49,10 +49,10 @@ module "environment_project" {
   apis = [
     {
       name = "compute.googleapis.com"
-      service_agent = {
-        email = "service-PROJECT-NUMBER@compute-system.iam.gserviceaccount.com"
-        role  = "roles/compute.serviceAgent"
-      }
+      # service_agent = {
+      #   email = "service-PROJECT-NUMBER@compute-system.iam.gserviceaccount.com"
+      #   role  = "roles/compute.serviceAgent"
+      # }
     }
   ]
   bindings = [
