@@ -51,7 +51,7 @@ module "environment_project" {
       name = "compute.googleapis.com"
       service_agent = {
         email = "service-PROJECT_NUMBER@compute-system.iam.gserviceaccount.com"
-        role  = "roles/compute.serviceAgent"
+        role  = "roles/compute.instanceAdmin.v1"
       }
     }
   ]
