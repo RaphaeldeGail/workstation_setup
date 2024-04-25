@@ -40,6 +40,12 @@ variable "exec_group" {
   nullable    = false
 }
 
+variable "admin_account" {
+  type        = string
+  description = ""
+  nullable    = false
+}
+
 variable "user" {
   type = object({
     ip   = string

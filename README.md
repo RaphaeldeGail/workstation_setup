@@ -28,6 +28,7 @@ No resources.
 
 | Name | Description | Type | Default |
 |------|-------------|------|---------|
+| admin\_account | n/a | `string` | n/a |
 | admin\_project | The ID of the admin project. | `string` | n/a |
 | billing\_account | The ID of the billing account used for the workspace. "Billing account User" permissions are required to execute module. | `string` | n/a |
 | bucket | The name of the administrator bucket. | `string` | n/a |
