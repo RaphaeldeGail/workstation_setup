@@ -69,37 +69,10 @@ module "environment_project" {
       ]
     }
   ]
-  kms_key = module.workspace_data.kms_key
 }
 
-# module "workstation" {
-#   source = "github.com/RaphaeldeGail/legendary-workstation?ref=feature%2Fmanage-workstation"
-#   providers = {
-#     google = google.environment
-#   }
-
-#   user    = var.user
-#   kms_key = module.admin_data.key_id
-
-#   depends_on = [
-#     module.environment_project
-#   ]
-# }
-
-# resource "google_dns_record_set" "frontend" {
-#   name = "${local.environment}.${module.admin_data.dns.domain}"
-#   type = "A"
-#   ttl  = 300
-
-#   managed_zone = module.admin_data.dns.name
-
-#   rrdatas = [
-#     module.workstation.nat_ip
-#   ]
-# }
-
-# resource "google_storage_bucket_iam_member" "shared_bucket_member" {
-#   bucket = var.bucket
-#   role   = "roles/storage.objectAdmin"
-#   member = join(":", ["serviceAccount", module.workstation.service_account])
-# }
+resource "google_kms_crypto_key_iam_member" "crypto_compute" {
+  crypto_key_id = module.workspace_data.kms_key
+  role          = "roles/cloudkms.cryptoKeyEncrypterDecrypter"
+  member        = "serviceAccount:service-${module.environment_project.project_number}@compute-system.iam.gserviceaccount.com"
+}

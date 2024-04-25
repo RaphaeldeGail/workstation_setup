@@ -11,7 +11,9 @@
 
 ## Providers
 
-No providers.
+| Name | Version |
+|------|---------|
+| google | 5.21.0 |
 
 ## Modules
 
@@ -22,7 +24,9 @@ No providers.
 
 ## Resources
 
-No resources.
+| Name | Type |
+|------|------|
+| [google_kms_crypto_key_iam_member.crypto_compute](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/kms_crypto_key_iam_member) | resource |
 
 ## Inputs
 
