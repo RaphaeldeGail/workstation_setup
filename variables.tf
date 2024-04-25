@@ -45,14 +45,3 @@ variable "admin_account" {
   description = ""
   nullable    = false
 }
-
-variable "user" {
-  type = object({
-    ip   = string
-    name = string
-    key  = string
-  })
-
-  description = "An object declaring a user with access authorization to the workstation."
-  nullable    = false
-}

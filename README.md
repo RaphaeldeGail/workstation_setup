@@ -35,7 +35,6 @@ No resources.
 | exec\_group | The email address of the Google group with usage permissions for the workstation. | `string` | n/a |
 | name | The name of the workspace. | `string` | n/a |
 | region | Geographical *region* for Google Cloud Platform. | `string` | n/a |
-| user | An object declaring a user with access authorization to the workstation. | ```object({ ip = string name = string key = string })``` | n/a |
 | workspace\_folder | The ID of the Workspace Folder. | `number` | n/a |
 
 ## Outputs
